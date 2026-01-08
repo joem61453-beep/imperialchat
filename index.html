@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ImperialChat</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #dadbd3; display: flex; height: 100vh; }
+        #auth-screen { position: fixed; inset: 0; background: #00a884; display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .card { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); text-align: center; }
+        input { display: block; width: 280px; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        button { width: 100%; padding: 12px; background: #075E54; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        #main-app { display: none; width: 100%; }
+        #sidebar { width: 300px; background: white; border-right: 1px solid #ddd; }
+        #chat-window { flex: 1; display: flex; flex-direction: column; background: #e5ddd5; }
+        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .msg { padding: 8px 12px; border-radius: 8px; max-width: 70%; font-size: 15px; }
+        .sent { align-self: flex-end; background: #dcf8c6; }
+        .received { align-self: flex-start; background: white; }
+    </style>
+</head>
+<body>
+
+<div id="auth-screen">
+    <div class="card">
+        <h1 style="color:#075E54">ImperialChat</h1>
+        <h2 id="title">Login</h2>
+        <input id="user" placeholder="Username">
+        <input id="pass" type="password" placeholder="Password">
+        <button onclick="doAuth()" id="authBtn">Enter</button>
+        <p onclick="toggleAuth()" style="color: #027eb5; cursor: pointer; margin-top: 15px;">Need an account? Sign Up</p>
+    </div>
+</div>
+
+<div id="main-app">
+    <div id="sidebar">
+        <div style="padding: 20px; background: #ededed; font-weight: bold; border-bottom: 1px solid #ddd;">Online Users</div>
+        <div id="user-list"></div>
+    </div>
+    <div id="chat-window">
+        <div id="chat-header" style="padding: 15px; background: #ededed; font-weight: bold;">Select a user</div>
+        <div id="messages"></div>
+        <div style="padding: 15px; background: #f0f0f0; display: flex; gap: 10px;">
+            <input id="msg-input" style="flex: 1; margin: 0; border-radius: 20px; border:none; padding:12px;" placeholder="Type a message">
+            <button onclick="send()" style="width: auto; border-radius: 50%;">Go</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // UPDATE THIS URL AFTER DEPLOYING TO RENDER
+    const socket = io('https://imperialtxt.onrender.com'); 
+    let myName = "", activeChat = "", isLogin = true;
+
+    function toggleAuth() {
+        isLogin = !isLogin;
+        document.getElementById('title').innerText = isLogin ? "Login" : "Sign Up";
+        document.getElementById('authBtn').innerText = isLogin ? "Login" : "Sign Up";
+    }
+
+    function doAuth() {
+        const u = document.getElementById('user').value;
+        const p = document.getElementById('pass').value;
+        socket.emit(isLogin ? 'login' : 'signup', { username: u, password: p });
+    }
+
+    socket.on('auth-res', r => {
+        if(r.success) {
+            myName = r.user;
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'flex';
+        } else alert(r.msg);
+    });
+
+    socket.on('update-users', users => {
+        const list = document.getElementById('user-list');
+        list.innerHTML = "";
+        for(let id in users) {
+            if(users[id] !== myName) {
+                let div = document.createElement('div');
+                div.style.padding = "15px"; div.style.borderBottom = "1px solid #eee"; div.style.cursor = "pointer";
+                div.innerText = users[id];
+                div.onclick = () => {
+                    activeChat = users[id];
+                    document.getElementById('chat-header').innerText = activeChat;
+                    document.getElementById('messages').innerHTML = "";
+                };
+                list.appendChild(div);
+            }
+        }
+    });
+
+    function send() {
+        const m = document.getElementById('msg-input').value;
+        if(!m || !activeChat) return;
+        socket.emit('send-msg', { from: myName, to: activeChat, msg: m });
+        addMsg(m, 'sent');
+        document.getElementById('msg-input').value = "";
+    }
+
+    socket.on('new-msg', d => {
+        if(d.from === activeChat) addMsg(d.msg, 'received');
+    });
+
+    function addMsg(t, c) {
+        const d = document.createElement('div');
+        d.className = `msg ${c}`;
+        d.innerText = t;
+        document.getElementById('messages').appendChild(d);
+        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+    }
+</script>
+</body>
+</html>
