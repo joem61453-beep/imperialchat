@@ -9,7 +9,7 @@ const bcrypt = require('bcryptjs');
 app.use(cors());
 
 // 1. DATABASE CONNECTION
-mongoose.connect('mongodb+srv://ianpro717m_db_user:Ian2026@cluster0.it5lgsw.mongodb.net/imperialDB?retryWrites=true&w=majority')
+mongoose.connect('mongodb+srv://joem61453_db_user:ian2026@cluster0.pyhqqti.mongodb.net/imperialDB?retryWrites=true&w=majority')
     .then(() => console.log("ImperialChat DB Connected"))
     .catch(err => console.log("DB Error:", err));
 
